@@ -66,7 +66,7 @@ st.markdown(
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
     /* Global */
-    * { font-family: 'Inter', sans-serif !important; }
+    *:not(.material-symbols-rounded):not([class*="stIcon"]):not([class*="icon"]):not(i):not(svg) { font-family: 'Inter', sans-serif !important; }
 
     /* Ana arkaplan */
     .stApp {
@@ -427,10 +427,24 @@ def get_fonts():
         os.makedirs(fonts_dir)
     reg_path = os.path.join(fonts_dir, "Roboto-Regular.ttf")
     bold_path = os.path.join(fonts_dir, "Roboto-Bold.ttf")
-    if not os.path.exists(reg_path):
-        urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf", reg_path)
-    if not os.path.exists(bold_path):
-        urllib.request.urlretrieve("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Bold.ttf", bold_path)
+    
+    try:
+        if not os.path.exists(reg_path):
+            r = requests.get("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Regular.ttf", timeout=15)
+            r.raise_for_status()
+            with open(reg_path, "wb") as f:
+                f.write(r.content)
+        if not os.path.exists(bold_path):
+            r = requests.get("https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Bold.ttf", timeout=15)
+            r.raise_for_status()
+            with open(bold_path, "wb") as f:
+                f.write(r.content)
+    except Exception as e:
+        print(f"Font indirme hatası: {e}")
+        # Hata olursa default font (helvetica) kullanması için yolları boş döndürebiliriz
+        # Ancak FPDF add_font path isteyecektir, bu yüzden hata fırlatmak daha güvenli:
+        raise RuntimeError(f"Font dosyaları indirilemedi: {e}")
+
     return reg_path, bold_path
 
 def safe_text(txt):
