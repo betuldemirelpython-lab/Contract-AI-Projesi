@@ -386,6 +386,29 @@ st.markdown(
         background: rgba(255,255,255,0.1);
         border-color: rgba(99,102,241,0.5);
     }
+
+    /* ── File Uploader butonu — çift metin sorununu gider ── */
+    [data-testid="stFileUploaderDropzone"] button {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        font-size: 0.9em !important;
+    }
+    /* Streamlit'in iç span'ini gizle, sadece button metni görünsün */
+    [data-testid="stFileUploaderDropzone"] button span {
+        display: none !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button::after {
+        content: "Dosya Seç";
+        color: white;
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        background: rgba(255,255,255,0.04) !important;
+        border: 2px dashed rgba(99,102,241,0.4) !important;
+        border-radius: 14px !important;
+    }
 </style>
 """,
     unsafe_allow_html=True,

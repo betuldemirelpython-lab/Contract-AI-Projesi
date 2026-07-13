@@ -68,4 +68,5 @@ htmlcov/
 dmypy.json
 
 # ─── Streamlit ─────────────────────────────────────────────────────────────
-.streamlit/
+# .streamlit/config.toml repoya dahil ediliyor; secrets.toml hariç
+.streamlit/secrets.toml
