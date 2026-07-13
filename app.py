@@ -7,11 +7,10 @@ import streamlit as st
 import requests
 import json
 import time
+import threading
 from datetime import datetime
 from pathlib import Path
 import base64
-import subprocess
-import sys
 import os
 import urllib.request
 import re
@@ -431,10 +430,12 @@ def get_fonts():
     return reg_path, bold_path
 
 def safe_text(txt):
-    """Uzun boşluksuz metinleri (örn: imza çizgileri) bölerek PDF'in çökmesini engeller."""
+    """Uzun boşluksuz metinleri böler, emojileri kaldırır (PDF uyumluluğu için)."""
     if not txt:
         return ""
     txt = str(txt).replace('\xa0', ' ')
+    # Emoji ve özel unicode karakterleri kaldır (fpdf2 Unicode dışı fontlarda crash yapar)
+    txt = re.sub(r'[^\x00-\x7F\u00C0-\u024F\u0100-\u017E]', '', txt)
     # 25 karakterden uzun boşluksuz kelimeleri böl
     return re.sub(r'(\S{25})', r'\1 ', txt)
 
@@ -444,49 +445,73 @@ def generate_pdf_report(result_dict: dict) -> bytes:
     reg_path, bold_path = get_fonts()
     
     pdf = FPDF()
+    pdf.set_margins(left=20, top=20, right=20)  # Yeterli margin
     pdf.add_page()
     pdf.add_font("Roboto", style="", fname=reg_path)
     pdf.add_font("Roboto", style="B", fname=bold_path)
     
-    pdf.set_font("Roboto", style="B", size=16)
-    pdf.cell(0, 10, "Sözleşme Analiz Raporu", align="C", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(5)
+    # Başlık
+    pdf.set_font("Roboto", style="B", size=18)
+    pdf.cell(0, 12, safe_text("Sozlesme Analiz Raporu"), align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_font("Roboto", style="", size=10)
+    pdf.cell(0, 6, safe_text(f"Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}"), align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(6)
     
+    # Risk skoru ve tür
     pdf.set_font("Roboto", style="B", size=12)
     score = analysis.get("risk_skoru", 0)
-    pdf.cell(0, 8, f"Risk Skoru: {score} / 100", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 8, safe_text(f"Risk Skoru: {score} / 100"), new_x="LMARGIN", new_y="NEXT")
     
     turu_key = analysis.get("sozlesme_turu", "diger")
-    turu = CONTRACT_TYPES.get(turu_key, "Diğer")
-    pdf.cell(0, 8, f"Sözleşme Türü: {turu}", new_x="LMARGIN", new_y="NEXT")
+    # Emoji'siz tür adı
+    turu_map = {
+        "auto": "Otomatik Tespit", "kira": "Kira Sozlesmesi",
+        "is": "Is Sozlesmesi", "nda": "Gizlilik Sozlesmesi (NDA)",
+        "hizmet": "Hizmet Sozlesmesi", "satis": "Satis Sozlesmesi", "diger": "Diger"
+    }
+    turu = turu_map.get(turu_key, "Diger")
+    pdf.cell(0, 8, safe_text(f"Sozlesme Turu: {turu}"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
+    # Özet
     pdf.set_font("Roboto", style="B", size=14)
-    pdf.cell(0, 10, "Özet", new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 10, safe_text("Ozet"), new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Roboto", style="", size=11)
-    pdf.multi_cell(0, 6, safe_text(analysis.get("ozet", "Özet bulunamadı.")))
+    pdf.multi_cell(0, 6, safe_text(analysis.get("ozet", "Ozet bulunamadi.")))
     pdf.ln(5)
     
+    # Genel Değerlendirme
     genel = analysis.get("genel_degerlendirme", "")
     if genel:
         pdf.set_font("Roboto", style="B", size=14)
-        pdf.cell(0, 10, "Genel Değerlendirme", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, safe_text("Genel Degerlendirme"), new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Roboto", style="", size=11)
         pdf.multi_cell(0, 6, safe_text(genel))
         pdf.ln(5)
     
+    # Riskler
     riskler = analysis.get("riskler", [])
     if riskler:
         pdf.set_font("Roboto", style="B", size=14)
-        pdf.cell(0, 10, "Riskler", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 10, safe_text("Riskler"), new_x="LMARGIN", new_y="NEXT")
         for i, r in enumerate(riskler, 1):
             pdf.set_font("Roboto", style="B", size=11)
             pdf.multi_cell(0, 6, safe_text(f"{i}. Madde: {r.get('madde', '')} (Seviye: {r.get('severity', '')})"))
             pdf.set_font("Roboto", style="", size=11)
-            pdf.multi_cell(0, 6, safe_text(f"Açıklama: {r.get('aciklama', '')}"))
+            pdf.multi_cell(0, 6, safe_text(f"Aciklama: {r.get('aciklama', '')}"))
             if r.get('oneri'):
-                pdf.multi_cell(0, 6, safe_text(f"Öneri: {r.get('oneri', '')}"))
+                pdf.multi_cell(0, 6, safe_text(f"Oneri: {r.get('oneri', '')}"))
             pdf.ln(3)
+    
+    # Tavsiyeler
+    tavsiyeler = analysis.get("tavsiyeler", [])
+    if tavsiyeler:
+        pdf.set_font("Roboto", style="B", size=14)
+        pdf.cell(0, 10, safe_text("Tavsiyeler"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_font("Roboto", style="", size=11)
+        for i, t in enumerate(tavsiyeler, 1):
+            pdf.multi_cell(0, 6, safe_text(f"{i}. {t}"))
+            pdf.ln(2)
 
     return pdf.output()
 
@@ -1120,21 +1145,32 @@ def render_about_page():
 
 @st.cache_resource
 def start_api_if_offline():
-    """Eğer API çevrimdışıysa arka planda otomatik olarak başlatır."""
-    if not check_api_health():
-        try:
-            subprocess.Popen(
-                [sys.executable, "-m", "uvicorn", "api:app", "--port", "8000"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-            # API'nin hazır olmasını bekle (en fazla 15 saniye)
-            for _ in range(15):
-                time.sleep(1)
-                if check_api_health():
-                    break
-        except Exception:
-            pass
+    """
+    FastAPI sunucusunu Streamlit ile aynı process içinde
+    daemon thread olarak başlatır.
+    Streamlit Cloud ve lokal ortamlarda çalışır —
+    kullanıcının hiçbir komut çalıştırmasına gerek yoktur.
+    """
+    if check_api_health():
+        return  # Zaten çalışıyor
+
+    def _run_server():
+        import uvicorn
+        uvicorn.run(
+            "api:app",
+            host="localhost",
+            port=8000,
+            log_level="error",   # Streamlit loglarını kirletmesin
+        )
+
+    thread = threading.Thread(target=_run_server, daemon=True, name="fastapi-server")
+    thread.start()
+
+    # API'nin ayağa kalkmasını bekle (en fazla 20 saniye)
+    for _ in range(20):
+        time.sleep(1)
+        if check_api_health():
+            break
 
 
 # ─── Ana Uygulama ─────────────────────────────────────────────────────────
