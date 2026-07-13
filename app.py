@@ -1166,21 +1166,18 @@ def start_api_if_offline():
         if check_api_health():
             return
 
-        def _run_server():
-            import uvicorn
-            # Zaten port kullanımdaysa exception fırlatır, thread kapanır
-            try:
-                uvicorn.run(
-                    "api:app",
-                    host="localhost",
-                    port=8000,
-                    log_level="error",
-                )
-            except Exception as e:
-                print(f"API baslatilamadi: {e}")
-
-        thread = threading.Thread(target=_run_server, daemon=True, name="fastapi-server")
-        thread.start()
+        import subprocess
+        import sys
+        
+        try:
+            # Thread yerine ayrı bir process olarak başlat (Streamlit Cloud'da çökmemesi için)
+            subprocess.Popen(
+                [sys.executable, "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception as e:
+            print(f"API baslatilamadi: {e}")
 
         # API'nin ayağa kalkmasını bekle (en fazla 20 saniye)
         with st.spinner("API sunucusu başlatılıyor, lütfen bekleyin..."):
