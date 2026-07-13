@@ -176,15 +176,25 @@ class AIService:
     def detect_contract_type(
         self, text: str, preferred_provider: str = "gemini"
     ) -> str:
-        """Sözleşme türünü otomatik tespit eder."""
+        """Sözleşme türünü otomatik tespit eder. Hata durumunda diğer sağlayıcıya geçer."""
+        sys_p, usr_p = get_detection_prompt(text)
         try:
             provider, _ = self._get_provider(preferred_provider)
-            sys_p, usr_p = get_detection_prompt(text)
             raw = provider.analyze(sys_p, usr_p)
+        except Exception as e:
+            logger.warning(f"Tür tespiti (ilk tercih) hatası: {e}. Alternatife geçiliyor.")
+            try:
+                alt_provider_name = "groq" if preferred_provider == "gemini" else "gemini"
+                alt_provider, _ = self._get_provider(alt_provider_name)
+                raw = alt_provider.analyze(sys_p, usr_p)
+            except Exception as e2:
+                logger.error(f"Tür tespiti (alternatif) de başarısız: {e2}")
+                return "diger"
+                
+        try:
             data = _parse_analysis_response(raw, "diger")
             return data.get("sozlesme_turu", "diger")
-        except Exception as e:
-            logger.error(f"Tür tespiti hatası: {e}")
+        except Exception:
             return "diger"
 
     def analyze_contract(
@@ -194,21 +204,29 @@ class AIService:
         preferred_provider: str = "gemini",
     ) -> tuple[AnalysisResult, str]:
         """
-        Sözleşmeyi analiz eder.
+        Sözleşmeyi analiz eder. Hata durumunda otomatik olarak diğer AI modeline düşer.
         Returns: (AnalysisResult, kullanılan_provider)
         """
         # Tür belirleme
         if not contract_type or contract_type == "auto":
             contract_type = self.detect_contract_type(text, preferred_provider)
 
-        # Provider seç
-        provider, used_provider = self._get_provider(preferred_provider)
-
         # Promptları oluştur
         sys_p, usr_p = get_analysis_prompt(contract_type, text)
 
-        # AI çağrısı
-        raw_response = provider.analyze(sys_p, usr_p)
+        # AI çağrısı ve Fallback (Yedekleme) Mantığı
+        try:
+            provider, used_provider = self._get_provider(preferred_provider)
+            raw_response = provider.analyze(sys_p, usr_p)
+        except Exception as e:
+            logger.warning(f"Analiz hatası ({preferred_provider}): {e}. Alternatif deneniyor...")
+            alt_provider_name = "groq" if preferred_provider == "gemini" else "gemini"
+            try:
+                alt_provider, used_provider = self._get_provider(alt_provider_name)
+                raw_response = alt_provider.analyze(sys_p, usr_p)
+            except Exception as e2:
+                logger.error(f"Alternatif AI ({alt_provider_name}) da hata verdi: {e2}")
+                raise RuntimeError(f"Tüm AI modelleri başarısız oldu (Örn: Kota aşımı). Hata: {str(e)} / {str(e2)}")
 
         # Parse
         analysis_dict = _parse_analysis_response(raw_response, contract_type)
