@@ -394,6 +394,10 @@ st.markdown(
         border-radius: 10px !important;
         font-weight: 600 !important;
         font-size: 0.9em !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
     }
     /* Streamlit'in iç span'ini gizle, sadece button metni görünsün */
     [data-testid="stFileUploaderDropzone"] button span {
@@ -549,7 +553,7 @@ def analyze_via_api(
         resp = requests.post(
             f"{API_BASE}/analyze",
             json=payload,
-            timeout=120,
+            timeout=300,
         )
         if resp.status_code == 200:
             return resp.json()
@@ -586,7 +590,7 @@ def analyze_file_via_api(
             f"{API_BASE}/analyze/file",
             files=files,
             data=data,
-            timeout=120,
+            timeout=300,
         )
         if resp.status_code == 200:
             return resp.json()
