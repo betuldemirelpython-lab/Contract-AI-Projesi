@@ -64,9 +64,11 @@ st.markdown(
 <style>
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-
-    /* Global */
-    *:not(.material-symbols-rounded):not([class*="stIcon"]):not([class*="icon"]):not(i):not(svg) { font-family: 'Inter', sans-serif !important; }
+    
+    /* Ana Font (Güvenli atama, ikonları bozmaz) */
+    html, body, p, h1, h2, h3, h4, h5, h6, label {
+        font-family: 'Inter', sans-serif;
+    }
 
     /* Ana arkaplan */
     .stApp {
@@ -470,15 +472,18 @@ def generate_pdf_report(result_dict: dict) -> bytes:
     
     # Başlık
     pdf.set_font("Roboto", style="B", size=18)
-    pdf.cell(0, 12, safe_text("Sozlesme Analiz Raporu"), align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(pdf.epw, 12, safe_text("Sozlesme Analiz Raporu"), align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Roboto", style="", size=10)
-    pdf.cell(0, 6, safe_text(f"Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}"), align="C", new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(pdf.epw, 6, safe_text(f"Tarih: {datetime.now().strftime('%d.%m.%Y %H:%M')}"), align="C", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(6)
     
     # Risk skoru ve tür
     pdf.set_font("Roboto", style="B", size=12)
     score = analysis.get("risk_skoru", 0)
-    pdf.cell(0, 8, safe_text(f"Risk Skoru: {score} / 100"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(pdf.epw, 8, safe_text(f"Risk Skoru: {score} / 100"), new_x="LMARGIN", new_y="NEXT")
     
     turu_key = analysis.get("sozlesme_turu", "diger")
     # Emoji'siz tür adı
@@ -488,47 +493,58 @@ def generate_pdf_report(result_dict: dict) -> bytes:
         "hizmet": "Hizmet Sozlesmesi", "satis": "Satis Sozlesmesi", "diger": "Diger"
     }
     turu = turu_map.get(turu_key, "Diger")
-    pdf.cell(0, 8, safe_text(f"Sozlesme Turu: {turu}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(pdf.epw, 8, safe_text(f"Sozlesme Turu: {turu}"), new_x="LMARGIN", new_y="NEXT")
     pdf.ln(5)
     
     # Özet
     pdf.set_font("Roboto", style="B", size=14)
-    pdf.cell(0, 10, safe_text("Ozet"), new_x="LMARGIN", new_y="NEXT")
+    pdf.set_x(pdf.l_margin)
+    pdf.cell(pdf.epw, 10, safe_text("Ozet"), new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Roboto", style="", size=11)
-    pdf.multi_cell(0, 6, safe_text(analysis.get("ozet", "Ozet bulunamadi.")))
+    pdf.set_x(pdf.l_margin)
+    pdf.multi_cell(pdf.epw, 6, safe_text(analysis.get("ozet", "Ozet bulunamadi.")))
     pdf.ln(5)
     
     # Genel Değerlendirme
     genel = analysis.get("genel_degerlendirme", "")
     if genel:
         pdf.set_font("Roboto", style="B", size=14)
-        pdf.cell(0, 10, safe_text("Genel Degerlendirme"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(pdf.epw, 10, safe_text("Genel Degerlendirme"), new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Roboto", style="", size=11)
-        pdf.multi_cell(0, 6, safe_text(genel))
+        pdf.set_x(pdf.l_margin)
+        pdf.multi_cell(pdf.epw, 6, safe_text(genel))
         pdf.ln(5)
     
     # Riskler
     riskler = analysis.get("riskler", [])
     if riskler:
         pdf.set_font("Roboto", style="B", size=14)
-        pdf.cell(0, 10, safe_text("Riskler"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(pdf.epw, 10, safe_text("Riskler"), new_x="LMARGIN", new_y="NEXT")
         for i, r in enumerate(riskler, 1):
             pdf.set_font("Roboto", style="B", size=11)
-            pdf.multi_cell(0, 6, safe_text(f"{i}. Madde: {r.get('madde', '')} (Seviye: {r.get('severity', '')})"))
+            pdf.set_x(pdf.l_margin)
+            pdf.multi_cell(pdf.epw, 6, safe_text(f"{i}. Madde: {r.get('madde', '')} (Seviye: {r.get('severity', '')})"))
             pdf.set_font("Roboto", style="", size=11)
-            pdf.multi_cell(0, 6, safe_text(f"Aciklama: {r.get('aciklama', '')}"))
+            pdf.set_x(pdf.l_margin)
+            pdf.multi_cell(pdf.epw, 6, safe_text(f"Aciklama: {r.get('aciklama', '')}"))
             if r.get('oneri'):
-                pdf.multi_cell(0, 6, safe_text(f"Oneri: {r.get('oneri', '')}"))
+                pdf.set_x(pdf.l_margin)
+                pdf.multi_cell(pdf.epw, 6, safe_text(f"Oneri: {r.get('oneri', '')}"))
             pdf.ln(3)
     
     # Tavsiyeler
     tavsiyeler = analysis.get("tavsiyeler", [])
     if tavsiyeler:
         pdf.set_font("Roboto", style="B", size=14)
-        pdf.cell(0, 10, safe_text("Tavsiyeler"), new_x="LMARGIN", new_y="NEXT")
+        pdf.set_x(pdf.l_margin)
+        pdf.cell(pdf.epw, 10, safe_text("Tavsiyeler"), new_x="LMARGIN", new_y="NEXT")
         pdf.set_font("Roboto", style="", size=11)
         for i, t in enumerate(tavsiyeler, 1):
-            pdf.multi_cell(0, 6, safe_text(f"{i}. {t}"))
+            pdf.set_x(pdf.l_margin)
+            pdf.multi_cell(pdf.epw, 6, safe_text(f"{i}. {t}"))
             pdf.ln(2)
 
     return pdf.output()
