@@ -1148,33 +1148,46 @@ def render_about_page():
 
 
 @st.cache_resource
+def get_api_lock():
+    return threading.Lock()
+
 def start_api_if_offline():
     """
     FastAPI sunucusunu Streamlit ile aynı process içinde
-    daemon thread olarak başlatır.
-    Streamlit Cloud ve lokal ortamlarda çalışır —
-    kullanıcının hiçbir komut çalıştırmasına gerek yoktur.
+    daemon thread olarak başlatır. Her sayfa yüklemesinde API'nin
+    çevrimiçi olup olmadığını kontrol eder.
     """
     if check_api_health():
         return  # Zaten çalışıyor
 
-    def _run_server():
-        import uvicorn
-        uvicorn.run(
-            "api:app",
-            host="localhost",
-            port=8000,
-            log_level="error",   # Streamlit loglarını kirletmesin
-        )
-
-    thread = threading.Thread(target=_run_server, daemon=True, name="fastapi-server")
-    thread.start()
-
-    # API'nin ayağa kalkmasını bekle (en fazla 20 saniye)
-    for _ in range(20):
-        time.sleep(1)
+    lock = get_api_lock()
+    with lock:
+        # Kilit alındıktan sonra tekrar kontrol et (race condition önleme)
         if check_api_health():
-            break
+            return
+
+        def _run_server():
+            import uvicorn
+            # Zaten port kullanımdaysa exception fırlatır, thread kapanır
+            try:
+                uvicorn.run(
+                    "api:app",
+                    host="localhost",
+                    port=8000,
+                    log_level="error",
+                )
+            except Exception as e:
+                print(f"API baslatilamadi: {e}")
+
+        thread = threading.Thread(target=_run_server, daemon=True, name="fastapi-server")
+        thread.start()
+
+        # API'nin ayağa kalkmasını bekle (en fazla 20 saniye)
+        with st.spinner("API sunucusu başlatılıyor, lütfen bekleyin..."):
+            for _ in range(20):
+                time.sleep(1)
+                if check_api_health():
+                    break
 
 
 # ─── Ana Uygulama ─────────────────────────────────────────────────────────
