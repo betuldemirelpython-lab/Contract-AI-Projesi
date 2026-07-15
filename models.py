@@ -96,6 +96,7 @@ class AnalyzeTextRequest(BaseModel):
         None, description="Sözleşme türü (belirtilmezse otomatik tespit edilir)"
     )
     ai_provider: Optional[str] = Field("gemini", description="AI sağlayıcı: gemini veya groq")
+    lang: Optional[str] = Field("tr", description="Language of analysis: tr or en")
 
 
 class AnalyzeResponse(BaseModel):

@@ -108,6 +108,7 @@ async def analyze_text(
             text=request.metin,
             contract_type=contract_type,
             preferred_provider=request.ai_provider or "gemini",
+            lang=request.lang or "tr",
         )
 
         # Veritabanına kaydet
@@ -142,6 +143,7 @@ async def analyze_file(
     file: UploadFile = File(...),
     sozlesme_turu: Optional[str] = Form(None),
     ai_provider: Optional[str] = Form("gemini"),
+    lang: Optional[str] = Form("tr"),
     db: Session = Depends(get_db),
 ):
     """
@@ -181,6 +183,7 @@ async def analyze_file(
             text=text,
             contract_type=sozlesme_turu or "auto",
             preferred_provider=ai_provider or "gemini",
+            lang=lang or "tr",
         )
 
         # DB kaydı
