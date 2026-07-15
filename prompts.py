@@ -151,45 +151,45 @@ Do not write anything other than the JSON. Do not use Markdown code blocks. Retu
 
 OUTPUT FORMAT (strictly follow this structure):
 {{
-  "ozet": "2-3 sentence summary of the contract",
-  "sozlesme_turu": "{contract_type}",
-  "risk_skoru": <integer between 0-100>,
-  "riskler": [
+  "summary": "2-3 sentence summary of the contract",
+  "contract_type": "{contract_type}",
+  "risk_score": <integer between 0-100>,
+  "risks": [
     {{
-      "madde": "Name of the relevant clause/section",
-      "aciklama": "Detailed description of the risk",
+      "clause": "Name of the relevant clause/section",
+      "description": "Detailed description of the risk",
       "severity": "low|medium|high|critical",
-      "oneri": "Our recommendation for this risk"
+      "recommendation": "Our recommendation for this risk"
     }}
   ],
-  "onemli_maddeler": [
+  "key_clauses": [
     {{
-      "baslik": "Clause title",
-      "icerik": "Content or summary of the clause",
-      "kategori": "payment|duration|termination|obligation|indemnity|etc"
+      "title": "Clause title",
+      "content": "Content or summary of the clause",
+      "category": "payment|duration|termination|obligation|indemnity|etc"
     }}
   ],
-  "tavsiyeler": [
+  "recommendations": [
     "Recommendation 1",
     "Recommendation 2"
   ],
-  "taraflar": {{
-    "taraf1": {{"ad": "...", "unvan": "...", "adres": "..."}},
-    "taraf2": {{"ad": "...", "unvan": "...", "adres": "..."}}
+  "parties": {{
+    "party1": {{"name": "...", "title": "...", "address": "..."}},
+    "party2": {{"name": "...", "title": "...", "address": "..."}}
   }},
-  "sure_ve_tarihler": {{
-    "baslangic": "...",
-    "bitis": "...",
-    "sure": "...",
-    "yenileme_kosullari": "..."
+  "duration_and_dates": {{
+    "start": "...",
+    "end": "...",
+    "duration": "...",
+    "renewal_conditions": "..."
   }},
-  "finansal_detaylar": {{
-    "miktar": "...",
-    "para_birimi": "...",
-    "odeme_kosullari": "...",
-    "ek_bilgi": {{}}
+  "financial_details": {{
+    "amount": "...",
+    "currency": "...",
+    "payment_terms": "...",
+    "additional_info": {{}}
   }},
-  "genel_degerlendirme": "General legal evaluation of the contract"
+  "general_evaluation": "General legal evaluation of the contract"
 }}
 
 RISK SCORE GUIDE:

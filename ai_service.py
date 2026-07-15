@@ -46,6 +46,54 @@ def _parse_analysis_response(raw_text: str, contract_type: str) -> Dict[str, Any
     try:
         cleaned = _clean_json_response(raw_text)
         data = json.loads(cleaned)
+        
+        # İngilizce (EN) JSON anahtarları geldiyse, Türkçe (TR) model formatına dönüştür.
+        if "summary" in data: data["ozet"] = data.pop("summary")
+        if "contract_type" in data: data["sozlesme_turu"] = data.pop("contract_type")
+        if "risk_score" in data: data["risk_skoru"] = data.pop("risk_score")
+        if "general_evaluation" in data: data["genel_degerlendirme"] = data.pop("general_evaluation")
+        if "recommendations" in data: data["tavsiyeler"] = data.pop("recommendations")
+        
+        if "risks" in data:
+            for r in data["risks"]:
+                if "clause" in r: r["madde"] = r.pop("clause")
+                if "description" in r: r["aciklama"] = r.pop("description")
+                if "recommendation" in r: r["oneri"] = r.pop("recommendation")
+            data["riskler"] = data.pop("risks")
+            
+        if "key_clauses" in data:
+            for k in data["key_clauses"]:
+                if "title" in k: k["baslik"] = k.pop("title")
+                if "content" in k: k["icerik"] = k.pop("content")
+                if "category" in k: k["kategori"] = k.pop("category")
+            data["onemli_maddeler"] = data.pop("key_clauses")
+            
+        if "parties" in data:
+            parties = data.pop("parties")
+            for p_v in parties.values():
+                if isinstance(p_v, dict):
+                    if "name" in p_v: p_v["ad"] = p_v.pop("name")
+                    if "title" in p_v: p_v["unvan"] = p_v.pop("title")
+                    if "address" in p_v: p_v["adres"] = p_v.pop("address")
+                    if "additional_info" in p_v: p_v["ek_bilgi"] = p_v.pop("additional_info")
+            data["taraflar"] = parties
+
+        if "duration_and_dates" in data:
+            dd = data.pop("duration_and_dates")
+            if "start" in dd: dd["baslangic"] = dd.pop("start")
+            if "end" in dd: dd["bitis"] = dd.pop("end")
+            if "duration" in dd: dd["sure"] = dd.pop("duration")
+            if "renewal_conditions" in dd: dd["yenileme_kosullari"] = dd.pop("renewal_conditions")
+            data["sure_ve_tarihler"] = dd
+
+        if "financial_details" in data:
+            fd = data.pop("financial_details")
+            if "amount" in fd: fd["miktar"] = fd.pop("amount")
+            if "currency" in fd: fd["para_birimi"] = fd.pop("currency")
+            if "payment_terms" in fd: fd["odeme_kosullari"] = fd.pop("payment_terms")
+            if "additional_info" in fd: fd["ek_bilgi"] = fd.pop("additional_info")
+            data["finansal_detaylar"] = fd
+
         return data
     except (json.JSONDecodeError, ValueError) as e:
         logger.warning(f"JSON parse hatası: {e}. Ham yanıt: {raw_text[:200]}")
@@ -174,10 +222,10 @@ class AIService:
             )
 
     def detect_contract_type(
-        self, text: str, preferred_provider: str = "gemini"
+        self, text: str, preferred_provider: str = "gemini", lang: str = "tr"
     ) -> str:
         """Sözleşme türünü otomatik tespit eder. Hata durumunda diğer sağlayıcıya geçer."""
-        sys_p, usr_p = get_detection_prompt(text)
+        sys_p, usr_p = get_detection_prompt(text, lang=lang)
         try:
             provider, _ = self._get_provider(preferred_provider)
             raw = provider.analyze(sys_p, usr_p)
@@ -202,6 +250,7 @@ class AIService:
         text: str,
         contract_type: Optional[str] = None,
         preferred_provider: str = "gemini",
+        lang: str = "tr",
     ) -> tuple[AnalysisResult, str]:
         """
         Sözleşmeyi analiz eder. Hata durumunda otomatik olarak diğer AI modeline düşer.
@@ -209,10 +258,10 @@ class AIService:
         """
         # Tür belirleme
         if not contract_type or contract_type == "auto":
-            contract_type = self.detect_contract_type(text, preferred_provider)
+            contract_type = self.detect_contract_type(text, preferred_provider, lang=lang)
 
         # Promptları oluştur
-        sys_p, usr_p = get_analysis_prompt(contract_type, text)
+        sys_p, usr_p = get_analysis_prompt(contract_type, text, lang=lang)
 
         # AI çağrısı ve Fallback (Yedekleme) Mantığı
         try:
