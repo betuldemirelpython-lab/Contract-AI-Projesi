@@ -1388,7 +1388,7 @@ def render_about_page():
 |--------|-----------|
 | 🖥️ Frontend | Streamlit |
 | ⚙️ Backend | FastAPI |
-| 🤖 AI | Gemini 1.5 Flash / Groq LLaMA |
+| 🤖 AI | Gemini 2.0 Flash / Groq LLaMA |
 | 🗄️ Veritabanı | SQLite + SQLAlchemy |
 | ✅ Doğrulama | Pydantic v2 |
 | 📄 PDF Okuma | PyMuPDF (fitz) |
@@ -1400,7 +1400,7 @@ def render_about_page():
 |-------|------------|
 | 🖥️ Frontend | Streamlit |
 | ⚙️ Backend | FastAPI |
-| 🤖 AI | Gemini 1.5 Flash / Groq LLaMA |
+| 🤖 AI | Gemini 2.0 Flash / Groq LLaMA |
 | 🗄️ Database | SQLite + SQLAlchemy |
 | ✅ Validation | Pydantic v2 |
 | 📄 PDF Reading | PyMuPDF (fitz) |
